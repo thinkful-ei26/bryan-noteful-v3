@@ -3,27 +3,30 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const router = express.Router();
+const { MONGODB_URI } = require('../config');
+const Note = require('../models/note');
 
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
   
+  let filters = {};
   mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
   .then(() => {
-    let filters = {};
     // queryableFields.forEach(field => {
     //   if (req.query[field]) {
     //     filters[field] = req.query[field]
     //   }
     // })
-    if (searchTerm) {
-      filters = { $or: [{title : { $regex: searchTerm, $options: 'i' }},
-      {content : { $regex: searchTerm, $options: 'i'}}]
+    if (req.query.searchTerm) {
+      filters = { $or: [{title : { $regex: req.query.searchTerm, $options: 'i' }},
+      {content : { $regex: req.query.searchTerm, $options: 'i'}}]
       };
-
+    }
     return Note.find(filters).sort({ updatedAt: 'desc' });
-  }})
+  })
   .then(results => {
-    console.log(results);
+    // console.log(results);
+    res.json(results);
   })
   .then(() => {
     return mongoose.disconnect()
@@ -34,11 +37,11 @@ router.get('/', (req, res, next) => {
   });
 
   console.log('Get All Notes');
-  res.json([
-    { id: 1, title: 'Temp 1' },
-    { id: 2, title: 'Temp 2' },
-    { id: 3, title: 'Temp 3' }
-  ]);
+  // res.json([
+  //   { id: 1, title: 'Temp 1' },
+  //   { id: 2, title: 'Temp 2' },
+  //   { id: 3, title: 'Temp 3' }
+  // ]);
 
 });
 
