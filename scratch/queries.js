@@ -39,4 +39,16 @@ const Note = require('../models/note');
 //   })
 //   .catch(error => console.log('ruh-roh'));
 
-// 
+// Create a new note using Note.create
+// mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
+//   .then(() => {
+//     let noteFiller = {title: "New Title", content: "New Content"};
+//     return Note.create(noteFiller)
+//   })
+//   .then(result => console.log((result)))
+//   .then(() => {
+//     return mongoose.disconnect()
+//   })
+//   .catch(error => console.log('SpaghettiOs'));
+
+// Update a note by id using Note.findByIdAndUpdate
