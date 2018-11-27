@@ -36,7 +36,7 @@ router.get('/', (req, res, next) => {
     console.error(err);
   });
 
-  console.log('Get All Notes');
+  // console.log('Get All Notes');
   // res.json([
   //   { id: 1, title: 'Temp 1' },
   //   { id: 2, title: 'Temp 2' },
@@ -47,18 +47,48 @@ router.get('/', (req, res, next) => {
 
 /* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/:id', (req, res, next) => {
-
-  console.log('Get a Note');
-  res.json({ id: 1, title: 'Temp 1' });
+  let id = req.params.id;
+  mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
+  .then(() => {
+    return Note.findById(id);
+  })
+  .then(result => res.json(result))
+  .then(() => {
+    return mongoose.disconnect()
+  })
+  .catch(err => {
+    console.error(`ERROR: ${err.message}`);
+    console.error(err);
+  });
 
 });
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
+  const updateObj = {};
+  const updateableFields = ['title', 'content'];
+  // req.body = {title, content};
+  updateableFields.forEach(field => {
+    if (field in req.body) {
+      updateObj[field] = req.body[field];
+    }
+  })
 
-  console.log('Create a Note');
-  res.location('path/to/new/document').status(201).json({ id: 2, title: 'Temp 2' });
-
+// Validate user input
+  if (!updateObj.title) {
+    const err = newError(`Yeah. Ummm... We're gonna need a title`);
+    err.status = 400;
+    return next(err);
+  }
+  mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
+  .then(() => {
+    return Note.create(updateObj);
+  })
+  .then(result => res.json((result)))
+  .then(() => {
+    return mongoose.disconnect()
+  })
+  .catch(error => console.log('SpaghettiOs'));
 });
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
