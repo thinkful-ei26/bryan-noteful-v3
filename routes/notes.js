@@ -65,26 +65,24 @@ router.get('/:id', (req, res, next) => {
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
-  const updateObj = {};
-  const updateableFields = ['title', 'content'];
-  // req.body = {title, content};
-  updateableFields.forEach(field => {
-    if (field in req.body) {
-      updateObj[field] = req.body[field];
-    }
-  })
-
+  const { title, content } = req.body;
+  const newItem = { title, content };
 // Validate user input
-  if (!updateObj.title) {
-    const err = newError(`Yeah. Ummm... We're gonna need a title`);
+  if (!newItem.title) {
+    const err = new Error(`Yeah. Ummm... We're gonna need a title`);
     err.status = 400;
     return next(err);
   }
+//Connect to server
   mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
   .then(() => {
     return Note.create(updateObj);
   })
-  .then(result => res.json((result)))
+  .then(result => {
+    if (result) {
+      res.location(`http://${req.headers.host}/notes/${result.id}`).status(201).json(result);
+    }
+  })
   .then(() => {
     return mongoose.disconnect()
   })
@@ -93,17 +91,40 @@ router.post('/', (req, res, next) => {
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
+  const id = req.params.id;
+  const {title , content} = req.body
 
-  console.log('Update a Note');
-  res.json({ id: 1, title: 'Updated Temp 1' });
+  mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
+  .then(() => {
+    return Note.findByIdAndUpdate(id, {$set: {title, content}}, 
+      {new: true}
+    )
+  })
+  .then(result => res.json(result))
+  .catch(error => {
+    console.log('Error');
+    res.status(400).json({"Error" : "ID not found"});
+  })
+  .then(() => {
+    return mongoose.disconnect();
+  })
 
 });
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
-
-  console.log('Delete a Note');
-  res.status(204).end();
+  const id = req.params.id;
+  mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
+  .then(() => {
+    return Note.findByIdAndRemove(id)
+   })
+   .then(res.sendStatus(204).end())
+   .then(() => {
+     return mongoose.disconnect();
+   })
+   .catch(() => {
+  res.status(400).json({"Error": "Note Id not found"});
+   })
 });
 
 module.exports = router;
