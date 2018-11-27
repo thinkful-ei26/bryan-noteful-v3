@@ -1,11 +1,37 @@
 'use strict';
 
 const express = require('express');
-
+const mongoose = require('mongoose');
 const router = express.Router();
 
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
+  
+  mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
+  .then(() => {
+    let filters = {};
+    // queryableFields.forEach(field => {
+    //   if (req.query[field]) {
+    //     filters[field] = req.query[field]
+    //   }
+    // })
+    if (searchTerm) {
+      filters = { $or: [{title : { $regex: searchTerm, $options: 'i' }},
+      {content : { $regex: searchTerm, $options: 'i'}}]
+      };
+
+    return Note.find(filters).sort({ updatedAt: 'desc' });
+  }})
+  .then(results => {
+    console.log(results);
+  })
+  .then(() => {
+    return mongoose.disconnect()
+  })
+  .catch(err => {
+    console.error(`ERROR: ${err.message}`);
+    console.error(err);
+  });
 
   console.log('Get All Notes');
   res.json([
