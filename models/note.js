@@ -13,4 +13,10 @@ noteSchema.set('timestamps', true);
 
 module.exports = mongoose.model('Note', noteSchema);
 
-
+noteSchema.set('toJSON', {
+  virtuals: true,     // include built-in virtual `id`
+  transform: (doc, ret) => {
+    delete ret._id; // delete `_id`
+    delete ret.__v;
+  }
+});
