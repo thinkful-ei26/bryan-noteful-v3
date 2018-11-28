@@ -120,14 +120,42 @@ describe('hooks', function() {
 
   describe('DELETE /api/notes/:id', function () {
     it("Should query the DB for the ID and delete the matching note", function() {
+      // Add new note to db, should receive id if properly executed through Mongoose model
       let note = new Note ({title: "Delete me", content: "Delete me too"});
       note.save((err, note) => {
+        // Query DB for new note
         chai.request(app)
+        // Run through API
         .delete(`/api/notes/${note.id}`)
+        // Check if executed
         .then((res) => {
           expect(res).to.have.status(204);
         })
       })
     })
   })
+
+  describe('PUT /api/notes/:id', function() {
+    it('Should query DB for ID, run PUT request through API and return updated content and title', function () {
+      let note = new Note ({title: "Update Me!", content: "Hey you should update me too"})
+      note.save((err, note) => {
+        chai.request(app)
+        .put(`/api/notes/${note.id}`)
+        .send({title: "I am updated!", content: "I am updated too!"})
+        .then((res) => {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          console.log(res.body);
+          expect(res.body).to.be.an('object');
+          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
+          expect(res.body.id).to.equal(note.id);
+          expect(res.body.title).to.equal(note.title);
+          expect(res.body.content).to.equal(note.content);
+          expect(new Date(res.body.createdAt)).to.eql(note.createdAt);
+          expect(new Date(res.body.updatedAt)).to.eql(note.updatedAt);
+        })
+      })
+    })
+  })
+                 
 });
