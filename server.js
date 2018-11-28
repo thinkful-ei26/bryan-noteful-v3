@@ -18,6 +18,48 @@ app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'common', {
 // Create a static webserver
 app.use(express.static('public'));
 
+//Connect to database and listen for incoming connections
+mongoose.set('useNewUrlParser', true);
+
+if (require.main === module) {
+   runServer(MONGODB_URI)
+   .catch(err => console.error(err));
+}
+
+let server;
+function runServer(databaseUrl, port = PORT) {
+ return new Promise((resolve, reject) => {
+      mongoose.connect(databaseUrl, err => {
+           if (err) {
+                return reject(err);
+           }
+           server = app.listen(port, () => {
+             console.log('Your app is listening on port', port);
+             resolve();
+           })
+           .on('error', err => {
+             mongoose.disconnect();
+             reject(err);
+           });
+       });
+ });
+}
+function closeServer() {
+  return mongoose.disconnect()
+  .then(() => {
+       return new Promise((resolve, reject) => {
+          console.log('Closing server');
+          server.close(err => {
+            if (err) {
+              return reject(err);
+            }
+          resolve();
+          });
+       });
+  });
+}
+
+
 // Parse request body
 app.use(express.json());
 
@@ -43,18 +85,18 @@ app.use((err, req, res, next) => {
 });
 
 // Connect to database and listen for incoming connections
-mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
-  .catch(err => {
-    console.error(`ERROR: ${err.message}`);
-    console.error('\n === Did you remember to start `mongod`? === \n');
-    console.error(err);
-  });
+// mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
+//   .catch(err => {
+//     console.error(`ERROR: ${err.message}`);
+//     console.error('\n === Did you remember to start `mongod`? === \n');
+//     console.error(err);
+//   });
 
-app.listen(PORT, function () {
-  console.info(`Server listening on ${this.address().port}`);
-}).on('error', err => {
-  console.error(err);
-});
+// app.listen(PORT, function () {
+//   console.info(`Server listening on ${this.address().port}`);
+// }).on('error', err => {
+//   console.error(err);
+// });
 
 // if (process.env.NODE_ENV !== 'test') {
 //   app.listen(PORT, function () {
@@ -64,4 +106,5 @@ app.listen(PORT, function () {
 //   });
 // }
 
-module.exports = app; // Export for testing
+
+module.exports = { runServer, app, closeServer }; // Export for testing

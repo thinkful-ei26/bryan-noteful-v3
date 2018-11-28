@@ -10,8 +10,8 @@ const Note = require('../models/note');
 router.get('/', (req, res, next) => {
   
   let filters = {};
-  mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
-  .then(() => {
+  // mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
+  // .then(() => {
     // queryableFields.forEach(field => {
     //   if (req.query[field]) {
     //     filters[field] = req.query[field]
@@ -28,12 +28,12 @@ router.get('/', (req, res, next) => {
     // console.log(results);
     res.json(results);
   })
-  .then(() => {
-    return mongoose.disconnect()
-  })
+  // .then(() => {
+  //   return mongoose.disconnect()
+  // })
   .catch(err => {
     console.error(`ERROR: ${err.message}`);
-    console.error(err);
+    // console.error(err);
   });
 
   // console.log('Get All Notes');
@@ -43,29 +43,29 @@ router.get('/', (req, res, next) => {
   //   { id: 3, title: 'Temp 3' }
   // ]);
 
-});
+// });
 
 /* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/:id', (req, res, next) => {
   let id = req.params.id;
-  mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
-  .then(() => {
-    return Note.findById(id);
-  })
+  // mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
+  // .then(() => {
+    return Note.findById(id)
+  // })
   .then(result => res.json(result))
-  .then(() => {
-    return mongoose.disconnect()
-  })
+  // .then(() => {
+    // return mongoose.disconnect()
+  // })
   .catch(err => {
     console.error(`ERROR: ${err.message}`);
-    console.error(err);
+    // console.error(err);
   });
 
 });
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
-  const { title, content } = req.body;
+  // const { title, content } = req.body;
   const newItem = { title, content };
 // Validate user input
   if (!newItem.title) {
@@ -74,18 +74,18 @@ router.post('/', (req, res, next) => {
     return next(err);
   }
 //Connect to server
-  mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
-  .then(() => {
-    return Note.create(updateObj);
-  })
+  // mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
+  // .then(() => {
+    return Note.create(newItem)
+  // })
   .then(result => {
     if (result) {
       res.location(`http://${req.headers.host}/notes/${result.id}`).status(201).json(result);
     }
   })
-  .then(() => {
-    return mongoose.disconnect()
-  })
+  // .then(() => {
+    // return mongoose.disconnect()
+  // })
   .catch(error => console.log('SpaghettiOs'));
 });
 
@@ -94,34 +94,34 @@ router.put('/:id', (req, res, next) => {
   const id = req.params.id;
   const {title , content} = req.body
 
-  mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
-  .then(() => {
+  // mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
+  // .then(() => {
     return Note.findByIdAndUpdate(id, {$set: {title, content}}, 
       {new: true}
     )
-  })
+  // })
   .then(result => res.json(result))
   .catch(error => {
     console.log('Error');
     res.status(400).json({"Error" : "ID not found"});
   })
-  .then(() => {
-    return mongoose.disconnect();
-  })
+  // .then(() => {
+    // return mongoose.disconnect();
+  // })
 
 });
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
   const id = req.params.id;
-  mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
-  .then(() => {
+  // mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
+  // .then(() => {
     return Note.findByIdAndRemove(id)
-   })
+  //  })
    .then(res.sendStatus(204).end())
-   .then(() => {
-     return mongoose.disconnect();
-   })
+  //  .then(() => {
+    //  return mongoose.disconnect();
+  //  })
    .catch(() => {
   res.status(400).json({"Error": "Note Id not found"});
    })
