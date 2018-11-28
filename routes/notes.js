@@ -5,7 +5,6 @@ const mongoose = require('mongoose');
 const router = express.Router();
 const { MONGODB_URI } = require('../config');
 const Note = require('../models/note');
-
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
   
@@ -19,11 +18,10 @@ router.get('/', (req, res, next) => {
     // })
     if (req.query.searchTerm) {
       filters = { $or: [{title : { $regex: req.query.searchTerm, $options: 'i' }},
-      {content : { $regex: req.query.searchTerm, $options: 'i'}}]
-      };
+      {content : { $regex: req.query.searchTerm, $options: 'i'}}
+      ]};
     }
-    return Note.find(filters).sort({ updatedAt: 'desc' });
-  })
+    return Note.find(filters).sort({ updatedAt: 'desc' })
   .then(results => {
     // console.log(results);
     res.json(results);
@@ -35,6 +33,7 @@ router.get('/', (req, res, next) => {
     console.error(`ERROR: ${err.message}`);
     // console.error(err);
   });
+});
 
   // console.log('Get All Notes');
   // res.json([
@@ -49,7 +48,7 @@ router.get('/', (req, res, next) => {
 router.get('/:id', (req, res, next) => {
   let id = req.params.id;
 
-  Note.findById(id)
+  return Note.findById(id)
   .then(result => {
     if (result) {
       res.json(result);
@@ -64,18 +63,18 @@ router.get('/:id', (req, res, next) => {
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
-  // const { title, content } = req.body;
-  const newItem = { title, content };
+  const { title, content } = req.body;
+  const note = { title, content }
 // Validate user input
-  if (!newItem.title) {
-    const err = new Error(`Yeah. Ummm... We're gonna need a title`);
-    err.status = 400;
-    return next(err);
-  }
+  // if (!note.title) {
+  //   const err = new Error(`Yeah. Ummm... We're gonna need a title`);
+  //   err.status = 400;
+  //   return next(err);
+  // }
 //Connect to server
   // mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
   // .then(() => {
-    return Note.create(newItem)
+  return Note.create(note)
   // })
   .then(result => {
     if (result) {
@@ -89,7 +88,27 @@ router.post('/', (req, res, next) => {
   // })
   .catch(error => {
     next(error);
+  })
 });
+
+// router.post('/', (req, res, next) => {
+//   const { title, content } = req.body;
+//   const newItem = { title, content };
+// // Validate user input
+//   if (!newItem.title) {
+//     const err = new Error(`Yeah. Ummm... We're gonna need a title`);
+//     err.status = 400;
+//     return next(err);
+//   }
+// //Connect to server
+//     return Note.create(newItem)
+//     .then(result => {
+//     if (result) {
+//       res.location(`http://${req.headers.host}/notes/${result.id}`).status(201).json(result);
+//     }
+//   })
+//   .catch(error => console.log('SpaghettiOs'));
+// });
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
@@ -116,17 +135,15 @@ router.put('/:id', (req, res, next) => {
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
   const id = req.params.id;
-  // mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
-  // .then(() => {
-    return Note.findByIdAndRemove(id)
+    return Note.findOneAndDelete(id)
   //  })
    .then(res.sendStatus(204).end())
-  //  .then(() => {
-    //  return mongoose.disconnect();
-  //  })
    .catch(() => {
   res.status(400).json({"Error": "Note Id not found"});
    })
 });
+   
+    
+
 
 module.exports = router;
