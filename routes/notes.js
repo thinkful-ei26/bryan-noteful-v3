@@ -48,19 +48,18 @@ router.get('/', (req, res, next) => {
 /* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/:id', (req, res, next) => {
   let id = req.params.id;
-  // mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
-  // .then(() => {
-    return Note.findById(id)
-  // })
-  .then(result => res.json(result))
-  // .then(() => {
-    // return mongoose.disconnect()
-  // })
+
+  Note.findById(id)
+  .then(result => {
+    if (result) {
+      res.json(result);
+    } else {
+      next();
+    }
+  })
   .catch(err => {
     console.error(`ERROR: ${err.message}`);
-    // console.error(err);
   });
-
 });
 
 /* ========== POST/CREATE AN ITEM ========== */
@@ -81,12 +80,15 @@ router.post('/', (req, res, next) => {
   .then(result => {
     if (result) {
       res.location(`http://${req.headers.host}/notes/${result.id}`).status(201).json(result);
+    } else {
+      next();
     }
   })
   // .then(() => {
     // return mongoose.disconnect()
   // })
-  .catch(error => console.log('SpaghettiOs'));
+  .catch(error => {
+    next(error);
 });
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
