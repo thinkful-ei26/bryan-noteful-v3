@@ -9,30 +9,18 @@ const Note = require('../models/note');
 router.get('/', (req, res, next) => {
   
   let filters = {};
-  // mongoose.connect(MONGODB_URI, { useNewUrlParser:true })
-  // .then(() => {
-    // queryableFields.forEach(field => {
-    //   if (req.query[field]) {
-    //     filters[field] = req.query[field]
-    //   }
-    // })
     if (req.query.searchTerm) {
       filters = { $or: [{title : { $regex: req.query.searchTerm, $options: 'i' }},
       {content : { $regex: req.query.searchTerm, $options: 'i'}}
       ]};
     }
-    return Note.find(filters).sort({ updatedAt: 'desc' })
-  .then(results => {
-    // console.log(results);
-    res.json(results);
-  })
-  // .then(() => {
-  //   return mongoose.disconnect()
-  // })
-  .catch(err => {
-    console.error(`ERROR: ${err.message}`);
-    // console.error(err);
-  });
+  Note.find(filters).sort({ updatedAt: 'desc' })
+    .then(results => {
+      res.json(results);
+    })
+    .catch(err => {
+      console.error(`ERROR: ${err.message}`);
+    });
 });
 
   // console.log('Get All Notes');
@@ -48,7 +36,7 @@ router.get('/', (req, res, next) => {
 router.get('/:id', (req, res, next) => {
   let id = req.params.id;
 
-  return Note.findById(id)
+  Note.findById(id)
   .then(result => {
     if (result) {
       res.json(result);
@@ -65,16 +53,7 @@ router.get('/:id', (req, res, next) => {
 router.post('/', (req, res, next) => {
   const { title, content } = req.body;
   const note = { title, content }
-// Validate user input
-  // if (!note.title) {
-  //   const err = new Error(`Yeah. Ummm... We're gonna need a title`);
-  //   err.status = 400;
-  //   return next(err);
-  // }
-//Connect to server
-  // mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
-  // .then(() => {
-  return Note.create(note)
+  Note.create(note)
   // })
   .then(result => {
     if (result) {
@@ -83,59 +62,30 @@ router.post('/', (req, res, next) => {
       next();
     }
   })
-  // .then(() => {
-    // return mongoose.disconnect()
-  // })
   .catch(error => {
     next(error);
   })
 });
 
-// router.post('/', (req, res, next) => {
-//   const { title, content } = req.body;
-//   const newItem = { title, content };
-// // Validate user input
-//   if (!newItem.title) {
-//     const err = new Error(`Yeah. Ummm... We're gonna need a title`);
-//     err.status = 400;
-//     return next(err);
-//   }
-// //Connect to server
-//     return Note.create(newItem)
-//     .then(result => {
-//     if (result) {
-//       res.location(`http://${req.headers.host}/notes/${result.id}`).status(201).json(result);
-//     }
-//   })
-//   .catch(error => console.log('SpaghettiOs'));
-// });
-
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
   const id = req.params.id;
   const {title , content} = req.body
-
-  // mongoose.connect(MONGODB_URI, {useNewUrlParser: true})
-  // .then(() => {
-    return Note.findByIdAndUpdate(id, {$set: {title, content}}, 
-      {new: true}
+    Note.findOneAndUpdate({_id: id}, {$set: {title, content, id}}, 
+      {new: true, upsert: true}
     )
-  // })
-  .then(result => res.json(result))
+  .then(result => {
+    res.json(result)})
   .catch(error => {
     console.log('Error');
     res.status(400).json({"Error" : "ID not found"});
   })
-  // .then(() => {
-    // return mongoose.disconnect();
-  // })
-
 });
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
   const id = req.params.id;
-    return Note.findOneAndDelete(id)
+  Note.findOneAndDelete(id)
   //  })
    .then(res.sendStatus(204).end())
    .catch(() => {
