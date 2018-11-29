@@ -7,8 +7,8 @@ const chaiHttp = require('chai-http');
 const app = require('../server');
 const { TEST_MONGODB_URI } = require('../config');
 const Note = require('../models/note');
-const { notes } = require('../db/seed/notes');
-const data = require('../db/seed/notes')
+const { notes } = require('../db/seed/data');
+const data = require('../db/seed/data')
 // mongoose.set('debug',true);  Good thing to have
 
 
