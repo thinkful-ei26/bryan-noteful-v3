@@ -1,0 +1,164 @@
+// 'use strict';
+
+// // Load requirements
+// const mongoose = require('mongoose');
+// const chai = require('chai');
+// const chaiHttp = require('chai-http');
+// const app = require('../server');
+// const { TEST_MONGODB_URI } = require('../config');
+// const Note = require('../models/note');
+// const Folder = require('../models/note')
+// const { notes, folders } = require('../db/seed/data');
+// const data = require('../db/seed/data');
+
+// // mongoose.set('debug',true);  Good thing to have
+
+
+// // Expect assertion library
+// const expect = chai.expect;
+
+// // Load chai Http
+// chai.use(chaiHttp);
+
+// // Mocha hooks
+// describe('hooks', function() {
+//   // Connect to the DB before all tests
+//   before(function () {
+//     return mongoose.connect(TEST_MONGODB_URI)
+//       .then(() => mongoose.connection.db.dropDatabase());
+//   });
+//   // Seed data runs beforeEach test
+//   beforeEach(function () {
+//     return Folder.insertMany(folders);
+//   });
+//   // Drop database runs afterEach test
+//   afterEach(function () {
+//     return mongoose.connection.db.dropDatabase();
+//   });
+//   // Disconnect after all tests
+//   after(function () {
+//     return mongoose.disconnect();
+//   });
+
+// // Serial Request - Call API then call DB then compare
+//   describe('POST /api/folders', function() {
+//     it('Should create a new folder, return 201 status (Created), be a json object with proper content fields', function() {
+//       const newFolder = {
+//         'name': 'I\'m a new folder today'
+//       };
+//       // Defining res so is available in both .then scope
+//       let res;
+//       // Call the API first to pass through 
+//       return chai.request(app)
+//         .post('/api/folders')
+//         .send(newFolder)
+//         .then(function (response) {
+//           //accessing our predefined res
+//           res = response;
+//           expect(res).to.have.status(201);
+//           expect(res).to.have.header('location');
+//           expect(res).to.be.json;
+//           expect(res.body).to.be.a('object');
+//           expect(res.body).to.have.keys('id', 'title', 'createdAt', 'updatedAt');
+//           // Call the database and return the folder with the ID matching the request body
+//           return Folder.findById(res.body.id)
+//         })
+//         // Compare the API response with the database response
+//         .then(data => {
+//           expect(res.body.id).to.equal(data.id);
+//           expect(res.body.title).to.equal(data.title);
+//           expect(res.body.content).to.equal(data.content);
+//           expect(new Date(res.body.createdAt)).to.eql(data.createdAt);
+//           expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
+//           // expect(res.body).to.eql(data);
+//         })
+//       })
+//   });
+
+//   describe('GET /api/folders/:id', function() {
+//     it('Should return the correct folder with the correct status', function () {
+//       let data;
+//       // 1) First, call the database (we need to access DB because thats were the ID is)
+//       return Folder.findOne()
+//         .then(_data => {
+//           data = _data;
+//           // 2) We use the ID we received from the DB and feed it into API
+//           return chai.request(app).get(`/api/folders/${data.id}`);
+//         })
+//         .then((res) => {
+//           expect(res).to.have.status(200);
+//           expect(res).to.be.json;
+
+//           expect(res.body).to.be.an('object');
+//           expect(res.body).to.have.keys('id', 'title',  'createdAt', 'updatedAt');
+
+//           // 3) Compare results from DB with response from API
+//           expect(res.body.id).to.equal(data.id);
+//           expect(res.body.title).to.equal(data.title);
+//           expect(res.body.content).to.equal(data.content);
+//           // expect(new Date(res.body.createdAt)).to.equal(data.createdAt);
+//           // expect(new Date(res.body.updatedAt)).to.equal(data.updatedAt);
+//         });
+//     });
+//   });
+
+//   describe('GET /api/folders', function() {
+//     it('Should query DB and get all folders', function() {
+//     // 1) Call the database **and** the API
+//     // 2) Wait for both promises to resolve using `Promise.all`
+//     return Promise.all([
+//         Folder.find(),
+//         chai.request(app).get('/api/folders')
+//       ])
+//       // 3) then compare database results to API response
+//         .then(([data, res]) => {
+//           expect(res).to.have.status(200);
+//           expect(res).to.be.json;
+//           expect(res.body).to.be.a('array');
+//           expect(res.body).to.have.length(data.length);
+//         });
+//     })
+//   });
+
+//   describe('DELETE /api/folders/:id', function () {
+//     it("Should query the DB for the ID and delete the matching folder", function() {
+//       // Add new folder to db, should receive id if properly executed through Mongoose model
+//       let folder = new Folder ({title: "Delete me", content: "Delete me too"});
+//       folder.save((err, folder) => {
+//         // Query DB for new folder
+//         chai.request(app)
+//         // Run through API
+//         .delete(`/api/folders/${folder.id}`)
+//         // Check if executed
+//         .then((res) => {
+//           expect(res).to.have.status(204);
+//         })
+//       })
+//     })
+//   })
+
+//   describe('PUT /api/folders/:id', function() {
+//     it('Should query DB for ID, run PUT request through API and return updated content and title', function () {
+//       let folder = new Folder ({title: "Update Me!", content: "Hey you should update me too"})
+//       folder.save((err, folder) => {
+//         chai.request(app)
+//         .put(`/api/folders/${folder.id}`)
+//         .send({title: "I am updated!", content: "I am updated too!"})
+//         .then((res) => {
+//           expect(res).to.have.status(200);
+//           expect(res).to.be.json;
+//           expect(res.body).to.be.an('object');
+//           expect(res.body).to.have.keys('id', 'title',  'createdAt', 'updatedAt');
+//           expect(res.body.id).to.equal(folder.id);
+//           // expect(res.body.title).to.equal(folder.title);
+//           // expect(res.body.content).to.equal(folder.content);
+//           // console.log('---' + new Date (res.body.createdAt) + '---')
+//           // console.log('---' + folder.createdAt + '---')
+//           // expect(new Date(res.body.createdAt)).to.eql(folder.createdAt);
+//           // expect(new Date(res.body.updatedAt)).to.eql(folder.updatedAt); // Work on doing this later
+//         })
+//       })
+//     })
+//   })
+                 
+// });

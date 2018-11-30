@@ -59,6 +59,11 @@ router.get('/:id', (req, res, next) => {
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
   const { title, content, folderId } = req.body;
+  const newNote = { title, content};
+
+  if(folderId) { // If folderId is valid, assign to new object
+     newNote.folderId = folderId
+  }
 
   /***** Never trust users - validate input *****/
   if (!title) {
@@ -67,12 +72,11 @@ router.post('/', (req, res, next) => {
     return next(err);
   }
   // Validate user input
-  if (!mongoose.Types.ObjectId.isValid(folderId)) {
+  if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
     const err = new Error('The folder is invalid');
     err.status = 400;
     return next(err);
   }
-  const newNote = { title, content, folderId };
 
   Note.create(newNote)
     .then(result => {
@@ -90,22 +94,34 @@ router.put('/:id', (req, res, next) => {
   const { id } = req.params;
   const { title, content, folderId } = req.body;
 
+  const newNote = { title, content};
+
+  if(folderId) { // If folderId is valid, assign to new object
+     newNote.folderId = folderId
+  }
   /***** Never trust users - validate input *****/
+  if (!title) {
+    const err = new Error('Missing title in request body');
+    err.status = 400;
+    return next(err);
+  }
   if (!mongoose.Types.ObjectId.isValid(id)) {
     const err = new Error('The id is not valid');
     err.status = 400;
     return next(err);
-  } else if (!mongoose.Types.ObjectId.isValid(folderId)) {
+  } 
+  if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
     const err = new Error('The folder is invalid');
     err.status = 400;
     return next(err);
-  } else if (!title) {
-    const err = new Error('Missing title in request body');
-    err.status = 400;
-    return next(err);
-  };
+  } 
 
-  const updateNote = { title, content };
+  const updateNote = { title, content, folderId };
+
+  if (folderId === '') {
+    delete updateNote.folderId
+    updateNote.$unset = { folderId: ''};
+  }
 
   Note.findByIdAndUpdate(id, updateNote, { new: true })
     .then(result => {
