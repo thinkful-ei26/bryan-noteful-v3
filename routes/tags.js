@@ -111,7 +111,7 @@ router.put('/:id', (req, res, next) => {
     });
 });
 
-/* ========== DELETE/REMOVE A SINGLE tag ========== */
+/* ========== DELETE/REMOVE A SINGLE TAG ========== */
 router.delete('/:id', async (req, res, next) => { 
 const { id } = req.params;
 // Validate user input
@@ -124,8 +124,11 @@ const { id } = req.params;
   if (!tag) {
     return next();
   } 
-  await Note.updateMany({tags: id}, {$pull: {tags: id}});
-  res.sendStatus(204);
+  const results = await Note.updateMany({tags: id}, {$pull: {tags: id}});
+  console.log(results);
+    if (results.n) {
+    res.sendStatus(204);
+  } 
 });
-       
+
 module.exports = router;
