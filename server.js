@@ -62,7 +62,7 @@ app.use((err, req, res, next) => {
     res.status(500).json({
       message: 'Internal Server Error'
     });
-  }
+  }console.log(err);
 });
 
 module.exports = app; // Export for testing

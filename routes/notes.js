@@ -63,20 +63,33 @@ router.get('/:id', (req, res, next) => {
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
-  const { title, content, folderId } = req.body;
-  const newNote = { title, content};
+  const { title, content, folderId, tags } = req.body;
+  const newNote = { title, content };
+  
+  /***** Never trust users - validate input *****/
 
   if(folderId) { // If folderId is valid, assign to new object
      newNote.folderId = folderId
   }
-
-  /***** Never trust users - validate input *****/
+  if(folderId === "") {
+    newNote.folderId = null;
+  }
+  
+  for (let i=0; i < tags.length; i++) {
+    if(tags && !mongoose.Types.ObjectId.isValid(tags[i])) {
+      const err = new Error('The tag is invalid');
+      err.status = 400;
+      return next(err);
+    }
+  }
+  if(tags.length > 0) { // If tags is valid, assign to new object
+    newNote.tags = tags
+  }
   if (!title) {
     const err = new Error('Missing title in request body');
     err.status = 400;
     return next(err);
   }
-  // Validate user input
   if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
     const err = new Error('The folder is invalid');
     err.status = 400;
@@ -90,6 +103,7 @@ router.post('/', (req, res, next) => {
         .json(result);
     })
     .catch(err => {
+      console.log(err);
       next(err);
     });
 });
@@ -97,37 +111,34 @@ router.post('/', (req, res, next) => {
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
   const { id } = req.params;
-  const { title, content, folderId } = req.body;
+  const { title, content, folderId, tags } = req.body;
 
-  const newNote = { title, content};
-
-  if(folderId) { // If folderId is valid, assign to new object
-     newNote.folderId = folderId
-  }
   /***** Never trust users - validate input *****/
-  if (!title) {
-    const err = new Error('Missing title in request body');
-    err.status = 400;
-    return next(err);
-  }
   if (!mongoose.Types.ObjectId.isValid(id)) {
-    const err = new Error('The id is not valid');
+    const err = new Error('The `id` is not valid');
     err.status = 400;
     return next(err);
-  } 
-  if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
-    const err = new Error('The folder is invalid');
-    err.status = 400;
-    return next(err);
-  } 
-
-  const updateNote = { title, content, folderId };
-
-  if (folderId === '') {
-    delete updateNote.folderId
-    updateNote.$unset = { folderId: ''};
   }
 
+  if (!title) {
+    const err = new Error('Missing `title` in request body');
+    err.status = 400;
+    return next(err);
+  }
+
+  if (folderId && !mongoose.Types.ObjectId.isValid(folderId)) {
+    const err = new Error('The `folderId` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
+  const updateNote = { title, content, folderId, tags };
+
+  if(folderId === '') {
+    updateNote.folderId = null;
+  }
+
+  //review loop/pattern following optional updating of fields
   Note.findByIdAndUpdate(id, updateNote, { new: true })
     .then(result => {
       if (result) {
@@ -137,9 +148,11 @@ router.put('/:id', (req, res, next) => {
       }
     })
     .catch(err => {
+      console.log(err);
       next(err);
     });
 });
+
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
