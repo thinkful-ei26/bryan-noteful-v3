@@ -1,163 +1,313 @@
 'use strict';
-
-// Load requirements
-const mongoose = require('mongoose');
 const chai = require('chai');
 const chaiHttp = require('chai-http');
+const mongoose = require('mongoose');
 const app = require('../server');
 const { TEST_MONGODB_URI } = require('../config');
 const Note = require('../models/note');
-const { notes } = require('../db/seed/data');
-const data = require('../db/seed/data')
-// mongoose.set('debug',true);  Good thing to have
-
-
-// Expect assertion library
+const Folder = require('../models/folder');
+const { notes, folders } = require('../db/seed/data');
 const expect = chai.expect;
-
-// Load chai Http
+mongoose.set('debug',true);
 chai.use(chaiHttp);
 
-// Mocha hooks
-describe('hooks', function() {
-  // Connect to the DB before all tests
+describe('Hooks', function () {
+
   before(function () {
-    return mongoose.connect(TEST_MONGODB_URI)
+    return mongoose.connect(TEST_MONGODB_URI, { useNewUrlParser: true })
       .then(() => mongoose.connection.db.dropDatabase());
   });
-  // Seed data runs beforeEach test
+
   beforeEach(function () {
     return Note.insertMany(notes);
   });
-  // Drop database runs afterEach test
+  beforeEach(function () {
+    return Folder.insertMany(folders);
+  });
+
   afterEach(function () {
     return mongoose.connection.db.dropDatabase();
   });
-  // Disconnect after all tests
+
   after(function () {
     return mongoose.disconnect();
   });
 
-// Serial Request - Call API then call DB then compare
-  describe('POST /api/notes', function() {
-    it('Should create a new note, return 201 status (Created), be a json object with proper content fields', function() {
-      const newNote = {
-        'title': 'Test title',
-        'content': 'Test content'
-      };
-      // Defining res so is available in both .then scope
-      let res;
-      // Call the API first to pass through 
-      return chai.request(app)
-        .post('/api/notes')
-        .send(newNote)
-        .then(function (response) {
-          //accessing our predefined res
-          res = response;
-          expect(res).to.have.status(201);
-          expect(res).to.have.header('location');
-          expect(res).to.be.json;
-          expect(res.body).to.be.a('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
-          // Call the database and return the Note with the ID matching the request body
-          return Note.findById(res.body.id)
-        })
-        // Compare the API response with the database response
-        .then(data => {
-          expect(res.body.id).to.equal(data.id);
-          expect(res.body.title).to.equal(data.title);
-          expect(res.body.content).to.equal(data.content);
-          expect(new Date(res.body.createdAt)).to.eql(data.createdAt);
-          expect(new Date(res.body.updatedAt)).to.eql(data.updatedAt);
-          // expect(res.body).to.eql(data);
-        })
-      })
-  });
+  describe('GET /api/notes', function () {
 
-  describe('GET /api/notes/:id', function() {
-    it('Should return the correct note with the correct status', function () {
-      let data;
-      // 1) First, call the database (we need to access DB because thats were the ID is)
-      return Note.findOne()
-        .then(_data => {
-          data = _data;
-          // 2) We use the ID we received from the DB and feed it into API
-          return chai.request(app).get(`/api/notes/${data.id}`);
-        })
-        .then((res) => {
-          expect(res).to.have.status(200);
-          expect(res).to.be.json;
-
-          expect(res.body).to.be.an('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
-
-          // 3) Compare results from DB with response from API
-          expect(res.body.id).to.equal(data.id);
-          expect(res.body.title).to.equal(data.title);
-          expect(res.body.content).to.equal(data.content);
-          // expect(new Date(res.body.createdAt)).to.equal(data.createdAt);
-          // expect(new Date(res.body.updatedAt)).to.equal(data.updatedAt);
-        });
-    });
-  });
-
-  describe('GET /api/notes', function() {
-    it('Should query DB and get all Notes', function() {
-    // 1) Call the database **and** the API
-    // 2) Wait for both promises to resolve using `Promise.all`
-    return Promise.all([
+    it('should return the correct number of Notes', function () {
+      return Promise.all([
         Note.find(),
         chai.request(app).get('/api/notes')
       ])
-      // 3) then compare database results to API response
         .then(([data, res]) => {
           expect(res).to.have.status(200);
           expect(res).to.be.json;
           expect(res.body).to.be.a('array');
           expect(res.body).to.have.length(data.length);
         });
-    })
-  });
+    });
 
-  describe('DELETE /api/notes/:id', function () {
-    it("Should query the DB for the ID and delete the matching note", function() {
-      // Add new note to db, should receive id if properly executed through Mongoose model
-      let note = new Note ({title: "Delete me", content: "Delete me too"});
-      note.save((err, note) => {
-        // Query DB for new note
-        chai.request(app)
-        // Run through API
-        .delete(`/api/notes/${note.id}`)
-        // Check if executed
-        .then((res) => {
-          expect(res).to.have.status(204);
-        })
-      })
-    })
-  })
-
-  describe('PUT /api/notes/:id', function() {
-    it('Should query DB for ID, run PUT request through API and return updated content and title', function () {
-      let note = new Note ({title: "Update Me!", content: "Hey you should update me too"})
-      note.save((err, note) => {
-        chai.request(app)
-        .put(`/api/notes/${note.id}`)
-        .send({title: "I am updated!", content: "I am updated too!"})
-        .then((res) => {
+    it('should return a list with the correct right fields', function () {
+      return Promise.all([
+        Note.find().sort({ updatedAt: 'desc' }),
+        chai.request(app).get('/api/notes')
+      ])
+        .then(([data, res]) => {
           expect(res).to.have.status(200);
           expect(res).to.be.json;
-          expect(res.body).to.be.an('object');
-          expect(res.body).to.have.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
-          expect(res.body.id).to.equal(note.id);
-          // expect(res.body.title).to.equal(note.title);
-          // expect(res.body.content).to.equal(note.content);
-          // console.log('---' + new Date (res.body.createdAt) + '---')
-          // console.log('---' + note.createdAt + '---')
-          // expect(new Date(res.body.createdAt)).to.eql(note.createdAt);
-          // expect(new Date(res.body.updatedAt)).to.eql(note.updatedAt); // Work on doing this later
-        })
-      })
-    })
-  })
-                 
+          expect(res.body).to.be.a('array');
+          expect(res.body).to.have.length(data.length);
+          res.body.forEach(function (item, i) {
+            expect(item).to.be.a('object');
+            expect(item).to.include.all.keys('id', 'title', 'createdAt', 'content', 'updatedAt');
+            expect(item.id).to.equal(data[i].id);
+            expect(item.title).to.equal(data[i].title);
+            expect(item.content).to.equal(data[i].content);
+            expect(new Date(item.createdAt)).to.deep.equal(data[i].createdAt);
+            expect(new Date(item.updatedAt)).to.deep.equal(data[i].updatedAt);
+          });
+        });
+    });
+
+    it('should return correct search results for a searchTerm query', function () {
+      const searchTerm = 'DOESNOTEXIST';
+      const re = new RegExp(searchTerm, 'i');
+      const dbPromise = Note.find({
+        // title: { $regex: searchTerm, $options: 'i' }
+        $or: [{ 'title': re }, { 'content': re }]
+      });
+      const apiPromise = chai.request(app)
+        .get(`/api/notes?searchTerm=${searchTerm}`);
+
+      return Promise.all([dbPromise, apiPromise])
+        .then(([data, res]) => {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.a('array');
+          expect(res.body).to.have.length(1);
+          res.body.forEach(function (item, i) {
+            expect(item).to.be.a('object');
+            expect(item).to.include.all.keys('id', 'title', 'createdAt', 'updatedAt');
+            expect(item.id).to.equal(data[i].id);
+            expect(item.title).to.equal(data[i].title);
+            expect(item.content).to.equal(data[i].content);
+            expect(new Date(item.createdAt)).to.deep.equal(data[i].createdAt);
+            expect(new Date(item.updatedAt)).to.deep.equal(data[i].updatedAt);
+          });
+        });
+    });
+
+    it('should return an empty array for an incorrect query', function () {
+      const searchTerm = 'gaga';
+      const folderIdSearch = 'DOESNOTEXIST'
+      const re = new RegExp(searchTerm, 'i');
+      const dbPromise = Note.find({
+        // title: { $regex: searchTerm, $options: 'i' }
+        $or: [{ 'title': re }, { 'content': re }]
+      });
+      const apiPromise = chai.request(app).get(`/api/notes?searchTerm=${searchTerm}`);
+      return Promise.all([dbPromise, apiPromise])
+        .then(([data, res]) => {
+          expect(res).to.have.status(200);
+          expect(res).to.be.json;
+          expect(res.body).to.be.a('array');
+          expect(res.body).to.have.length(data.length);
+        });
+    });
+  });
+
+  // describe('GET /api/notes/:id', function () {
+
+  //   it('should return correct notes', function () {
+  //     let data;
+  //     return Note.findOne()
+  //       .then(_data => {
+  //         data = _data;
+  //         return chai.request(app).get(`/api/notes/${data.id}`);
+  //       })
+  //       .then((res) => {
+  //         expect(res).to.have.status(200);
+  //         expect(res).to.be.json;
+  //         expect(res.body).to.be.an('object');
+  //         expect(res.body).to.have.all.keys('id', 'title', 'content', 'folderId', 'createdAt', 'updatedAt');
+  //         expect(res.body.id).to.equal(data.id);
+  //         expect(res.body.title).to.equal(data.title);
+  //         expect(res.body.content).to.equal(data.content);
+  //         expect(new Date(res.body.createdAt)).to.deep.equal(data.createdAt);
+  //         expect(new Date(res.body.updatedAt)).to.deep.equal(data.updatedAt);
+  //       });
+  //   });
+
+  //   it('should respond with status 400 and an error message when `id` is not valid', function () {
+  //     return chai.request(app)
+  //       .get('/api/notes/NOT-A-VALID-ID')
+  //       .then(res => {
+  //         expect(res).to.have.status(400);
+  //         expect(res.body.message).to.eq('The id is not valid');
+  //       });
+  //   });
+
+  //   it('should respond with a 404 for an id that does not exist', function () {
+  //     // The string "DOESNOTEXIST" is 12 bytes which is a valid Mongo ObjectId
+  //     return chai.request(app)
+  //       .get('/api/notes/DOESNOTEXIST')
+  //       .then(res => {
+  //         expect(res).to.have.status(404);
+  //       });
+  //   });
+
+  // });
+
+  // describe('POST /api/notes', function () {
+
+  //   it('should create and return a new item when provided valid data', function () {
+  //     const newItem = {
+  //       'title': 'The best article about cats ever!',
+  //       'content': 'Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor...'
+  //     };
+  //     let res;
+  //     return chai.request(app)
+  //       .post('/api/notes')
+  //       .send(newItem)
+  //       .then(function (_res) {
+  //         res = _res;
+  //         expect(res).to.have.status(201);
+  //         expect(res).to.have.header('location');
+  //         expect(res).to.be.json;
+  //         expect(res.body).to.be.a('object');
+  //         expect(res.body).to.have.all.keys('id', 'title', 'content', 'createdAt', 'updatedAt');
+  //         return Note.findById(res.body.id);
+  //       })
+  //       .then(data => {
+  //         expect(res.body.id).to.equal(data.id);
+  //         expect(res.body.title).to.equal(data.title);
+  //         expect(res.body.content).to.equal(data.content);
+  //         expect(new Date(res.body.createdAt)).to.deep.equal(data.createdAt);
+  //         expect(new Date(res.body.updatedAt)).to.deep.equal(data.updatedAt);
+  //       });
+  //   });
+
+  //   it('should return an error when missing "title" field', function () {
+  //     const newItem = {
+  //       'content': 'Lorem ipsum dolor sit amet, sed do eiusmod tempor...'
+  //     };
+  //     return chai.request(app)
+  //       .post('/api/notes')
+  //       .send(newItem)
+  //       .then(res => {
+  //         expect(res).to.have.status(400);
+  //         expect(res).to.be.json;
+  //         expect(res.body).to.be.a('object');
+  //         expect(res.body.message).to.equal('Missing title in request body');
+  //       });
+  //   });
+
+  // });
+
+  // describe('PUT /api/notes/:id', function () {
+
+  //   it('should update the note when provided valid data', function () {
+  //     const updateItem = {
+  //       'title': 'What about dogs?!',
+  //       'content': 'woof woof'
+  //     };
+  //     let res, orig;
+  //     return Note.findOne()
+  //       .then(_orig => {
+  //         orig = _orig;
+  //         return chai.request(app)
+  //           .put(`/api/notes/${orig.id}`)
+  //           .send(updateItem);
+  //       })
+  //       .then(function (_res) {
+  //         res = _res;
+  //         expect(res).to.have.status(200);
+  //         expect(res).to.be.json;
+  //         expect(res.body).to.be.a('object');
+  //         expect(res.body).to.have.all.keys('id', 'title', 'content', 'folderId', 'createdAt', 'updatedAt');
+  //         return Note.findById(res.body.id);
+  //       })
+  //       .then( data => {
+  //         expect(res.body.title).to.equal(data.title);
+  //         expect(res.body.content).to.equal(data.content);
+  //         expect(new Date(res.body.createdAt)).to.deep.equal(data.createdAt);
+  //         expect(new Date(res.body.updatedAt)).to.deep.equal(data.updatedAt);
+  //         // expect note to have been updated
+  //         expect(new Date(res.body.updatedAt)).to.greaterThan(orig.updatedAt);
+  //       });
+  //   });
+
+  //   it('should respond with status 400 and an error message when `id` is not valid', function () {
+  //     const updateItem = {
+  //       'title': 'What about dogs?!',
+  //       'content': 'woof woof'
+  //     };
+  //     return chai.request(app)
+  //       .put('/api/notes/NOT-A-VALID-ID')
+  //       .send(updateItem)
+  //       .then(res => {
+  //         expect(res).to.have.status(400);
+  //         expect(res.body.message).to.eq('The id is not valid');
+  //       });
+  //   });
+
+  //   it('should respond with a 404 for an id that does not exist', function () {
+  //     // The string "DOESNOTEXIST" is 12 bytes which is a valid Mongo ObjectId
+  //     const updateItem = {
+  //       'title': 'What about dogs?!',
+  //       'content': 'woof woof'
+  //     };
+  //     return chai.request(app)
+  //       .put('/api/notes/DOESNOTEXIST')
+  //       .send(updateItem)
+  //       .then(res => {
+  //         expect(res).to.have.status(404);
+  //       });
+  //   });
+
+  //   it('should return an error when missing "title" field', function () {
+  //     const updateItem = {
+  //       'content': 'woof woof'
+  //     };
+  //     let data;
+  //     return Note.findOne()
+  //       .then(_data => {
+  //         data = _data;
+
+  //         return chai.request(app)
+  //           .put(`/api/notes/${data.id}`)
+  //           .send(updateItem);
+  //       })
+  //       .then(res => {
+  //         expect(res).to.have.status(400);
+  //         expect(res).to.be.json;
+  //         expect(res.body).to.be.a('object');
+  //         expect(res.body.message).to.equal('The folder is invalid');
+  //       });
+  //   });
+
+  // });
+
+  // describe('DELETE /api/notes/:id', function () {
+
+  //   it('should delete an existing document and respond with 204', function () {
+  //     let data;
+  //     return Note.findOne()
+  //       .then(_data => {
+  //         data = _data;
+  //         return chai.request(app).delete(`/api/notes/${data.id}`);
+  //       })
+  //       .then(function (res) {
+  //         expect(res).to.have.status(204);
+  //         return Note.countDocuments({ _id: data.id });
+  //       })
+  //       .then(count => {
+  //         expect(count).to.equal(0);
+  //       });
+  //   });
+
+  // });
+
 });
+

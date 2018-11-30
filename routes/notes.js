@@ -2,98 +2,142 @@
 
 const express = require('express');
 const mongoose = require('mongoose');
-const router = express.Router();
-const { MONGODB_URI } = require('../config');
+
 const Note = require('../models/note');
+
+const router = express.Router();
+
 /* ========== GET/READ ALL ITEMS ========== */
 router.get('/', (req, res, next) => {
-  
-  let filters = {};
-    if (req.query.searchTerm) {
-      filters = { $or: [{title : { $regex: req.query.searchTerm, $options: 'i' }},
-      {content : { $regex: req.query.searchTerm, $options: 'i'}}
-      ]};
-    }
-  Note.find(filters).sort({ updatedAt: 'desc' })
+  const { searchTerm } = req.query;
+
+  let filter = {};
+
+  if (searchTerm) {
+    const re = new RegExp(searchTerm, 'i');
+    filter.$or = [{ 'title': re }, { 'content': re }];
+  }
+  if (req.query.folderId) {
+    filter = {
+      folderId: req.query.folderId
+    };
+  }
+
+  return Note.find(filter)
+    .sort({ updatedAt: 'desc' })
     .then(results => {
       res.json(results);
     })
     .catch(err => {
-      console.error(`ERROR: ${err.message}`);
+      next(err);
     });
 });
 
-  // console.log('Get All Notes');
-  // res.json([
-  //   { id: 1, title: 'Temp 1' },
-  //   { id: 2, title: 'Temp 2' },
-  //   { id: 3, title: 'Temp 3' }
-  // ]);
-
-// });
-
 /* ========== GET/READ A SINGLE ITEM ========== */
 router.get('/:id', (req, res, next) => {
-  let id = req.params.id;
+  const { id } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The id is not valid');
+    err.status = 400;
+    return next(err);
+  }
 
   Note.findById(id)
-  .then(result => {
-    if (result) {
-      res.json(result);
-    } else {
-      next();
-    }
-  })
-  .catch(err => {
-    console.error(`ERROR: ${err.message}`);
-  });
+    .then(result => {
+      if (result) {
+        res.json(result);
+      } else {
+        next();
+      }
+    })
+    .catch(err => {
+      next(err);
+    });
 });
 
 /* ========== POST/CREATE AN ITEM ========== */
 router.post('/', (req, res, next) => {
-  const { title, content } = req.body;
-  const note = { title, content }
-  Note.create(note)
-  // })
-  .then(result => {
-    if (result) {
-      res.location(`http://${req.headers.host}/notes/${result.id}`).status(201).json(result);
-    } else {
-      next();
-    }
-  })
-  .catch(error => {
-    next(error);
-  })
+  const { title, content, folderId } = req.body;
+
+  /***** Never trust users - validate input *****/
+  if (!title) {
+    const err = new Error('Missing title in request body');
+    err.status = 400;
+    return next(err);
+  }
+  // Validate user input
+  if (!mongoose.Types.ObjectId.isValid(folderId)) {
+    const err = new Error('The folder is invalid');
+    err.status = 400;
+    return next(err);
+  }
+  const newNote = { title, content, folderId };
+
+  Note.create(newNote)
+    .then(result => {
+      res.location(`${req.originalUrl}/${result.id}`)
+        .status(201)
+        .json(result);
+    })
+    .catch(err => {
+      next(err);
+    });
 });
 
 /* ========== PUT/UPDATE A SINGLE ITEM ========== */
 router.put('/:id', (req, res, next) => {
-  const id = req.params.id;
-  const {title , content} = req.body
-    Note.findOneAndUpdate({_id: id}, {$set: {title, content, id}}, 
-      {new: true, upsert: true}
-    )
-  .then(result => {
-    res.json(result)})
-  .catch(error => {
-    console.log('Error');
-    res.status(400).json({"Error" : "ID not found"});
-  })
+  const { id } = req.params;
+  const { title, content, folderId } = req.body;
+
+  /***** Never trust users - validate input *****/
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The id is not valid');
+    err.status = 400;
+    return next(err);
+  } else if (!mongoose.Types.ObjectId.isValid(folderId)) {
+    const err = new Error('The folder is invalid');
+    err.status = 400;
+    return next(err);
+  } else if (!title) {
+    const err = new Error('Missing title in request body');
+    err.status = 400;
+    return next(err);
+  };
+
+  const updateNote = { title, content };
+
+  Note.findByIdAndUpdate(id, updateNote, { new: true })
+    .then(result => {
+      if (result) {
+        res.json(result);
+      } else {
+        next();
+      }
+    })
+    .catch(err => {
+      next(err);
+    });
 });
 
 /* ========== DELETE/REMOVE A SINGLE ITEM ========== */
 router.delete('/:id', (req, res, next) => {
-  const id = req.params.id;
-  Note.findOneAndDelete(id)
-  //  })
-   .then(res.sendStatus(204).end())
-   .catch(() => {
-  res.status(400).json({"Error": "Note Id not found"});
-   })
-});
-   
-    
+  const { id } = req.params;
 
+  /***** Never trust users - validate input *****/
+  if (!mongoose.Types.ObjectId.isValid(id)) {
+    const err = new Error('The `id` is not valid');
+    err.status = 400;
+    return next(err);
+  }
+
+  Note.findByIdAndRemove(id)
+    .then(() => {
+      res.status(204).end();
+    })
+    .catch(err => {
+      next(err);
+    });
+});
 
 module.exports = router;

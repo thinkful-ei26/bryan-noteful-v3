@@ -3,12 +3,10 @@
 const express = require('express');
 const morgan = require('morgan');
 const mongoose = require('mongoose');
-const {
-  PORT,
-  MONGODB_URI
-} = require('./config');
+const { PORT, MONGODB_URI } = require('./config');
 const notesRouter = require('./routes/notes');
-mongoose.Promise = global.Promise;
+const foldersRouter = require('./routes/folders');
+// mongoose.Promise = global.Promise;
 
 // Create an Express application
 const app = express();
@@ -26,12 +24,8 @@ mongoose.set('useNewUrlParser', true);
 
 if (require.main === module) {
   //  Connect to database and listen for incoming connections
-  mongoose.connect(MONGODB_URI, {
-      useNewUrlParser: true
-    })
+  mongoose.connect(MONGODB_URI, { useNewUrlParser: true })
     .catch(err => {
-      console.error(`ERROR: ${err.message}`);
-      console.error('\n === Did you remember to start `mongod`? === \n');
       console.error(err);
     });
 
@@ -47,6 +41,7 @@ app.use(express.json());
 
 // Mount routers
 app.use('/api/notes', notesRouter);
+app.use('/api/folders', foldersRouter);
 
 // Custom 404 Not Found route handler
 app.use((req, res, next) => {
@@ -58,12 +53,10 @@ app.use((req, res, next) => {
 // Custom Error Handler
 app.use((err, req, res, next) => {
   if (err.status) {
-    const errBody = Object.assign({}, err, {
-      message: err.message
-    });
+    const errBody = Object.assign({}, err, {message: err.message});
     res.status(err.status).json(errBody);
   } else {
-    console.error(err);
+    // console.error(err);
     res.status(500).json({
       message: 'Internal Server Error'
     });

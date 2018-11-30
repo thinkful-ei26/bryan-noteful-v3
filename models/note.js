@@ -1,22 +1,22 @@
-const mongoose = require('mongoose');
+'use strict';
 
-// let now = new Date();
+const mongoose = require('mongoose');
 
 const noteSchema = new mongoose.Schema({
   title: { type: String, required: true },
   content: String,
   folderId: {type: mongoose.Schema.Types.ObjectId, ref: 'Folder'}
 });
+//unfold for hook 
 
-// Add 'createdAt' and 'updatedAt' fields
 noteSchema.set('timestamps', true);
 
-module.exports = mongoose.model('Note', noteSchema);
-
 noteSchema.set('toJSON', {
-  virtuals: true,     // include built-in virtual `id`
+  virtuals: true,   
   transform: (doc, ret) => {
-    delete ret._id; // delete `_id`
+    delete ret._id; 
     delete ret.__v;
   }
 });
+
+module.exports = mongoose.model('Note', noteSchema);
