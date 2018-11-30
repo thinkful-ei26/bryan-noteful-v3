@@ -25,7 +25,7 @@ router.get('/', (req, res, next) => {
     filter.tags = tagId
   }
 
-  return Note.find(filter)
+Note.find(filter)
     .populate('tags')
     .sort({ updatedAt: 'desc' })
     .then(results => {
@@ -82,6 +82,7 @@ router.post('/', (req, res, next) => {
       return next(err);
     }
   }
+
   if(tags.length > 0) { // If tags is valid, assign to new object
     newNote.tags = tags
   }
@@ -132,7 +133,20 @@ router.put('/:id', (req, res, next) => {
     return next(err);
   }
 
-  const updateNote = { title, content, folderId, tags };
+  
+  const updateNote = { title, content, folderId};
+  
+  for (let i=0; i < tags.length; i++) {
+    if(tags && !mongoose.Types.ObjectId.isValid(tags[i])) {
+      const err = new Error('The tag is invalid');
+      err.status = 400;
+      return next(err);
+    }
+  }
+
+  if(tags.length > 0) { // If tags is valid, assign to new object
+    updateNote.tags = tags
+  }
 
   if(folderId === '') {
     updateNote.folderId = null;
