@@ -2,10 +2,12 @@
 
 const express = require('express');
 const morgan = require('morgan');
-
-const { PORT } = require('./config');
-
+const mongoose = require('mongoose');
+const { PORT, MONGODB_URI } = require('./config');
 const notesRouter = require('./routes/notes');
+const foldersRouter = require('./routes/folders');
+const tagsRouter = require('./routes/tags');
+// mongoose.Promise = global.Promise;
 
 // Create an Express application
 const app = express();
@@ -18,11 +20,30 @@ app.use(morgan(process.env.NODE_ENV === 'development' ? 'dev' : 'common', {
 // Create a static webserver
 app.use(express.static('public'));
 
+//Connect to database and listen for incoming connections
+mongoose.set('useNewUrlParser', true);
+
+if (require.main === module) {
+  //  Connect to database and listen for incoming connections
+  mongoose.connect(MONGODB_URI, { useNewUrlParser: true })
+    .catch(err => {
+      console.error(err);
+    });
+
+  app.listen(PORT, function () {
+    console.info(`Server listening on ${this.address().port}`);
+  }).on('error', err => {
+    console.error(err);
+  });
+};
+
 // Parse request body
 app.use(express.json());
 
 // Mount routers
 app.use('/api/notes', notesRouter);
+app.use('/api/folders', foldersRouter);
+app.use('/api/tags', tagsRouter);
 
 // Custom 404 Not Found route handler
 app.use((req, res, next) => {
@@ -34,21 +55,14 @@ app.use((req, res, next) => {
 // Custom Error Handler
 app.use((err, req, res, next) => {
   if (err.status) {
-    const errBody = Object.assign({}, err, { message: err.message });
+    const errBody = Object.assign({}, err, {message: err.message});
     res.status(err.status).json(errBody);
   } else {
-    console.error(err);
-    res.status(500).json({ message: 'Internal Server Error' });
-  }
+    // console.error(err);
+    res.status(500).json({
+      message: 'Internal Server Error'
+    });
+  }console.log(err);
 });
-
-// Listen for incoming connections
-if (process.env.NODE_ENV !== 'test') {
-  app.listen(PORT, function () {
-    console.info(`Server listening on ${this.address().port}`);
-  }).on('error', err => {
-    console.error(err);
-  });
-}
 
 module.exports = app; // Export for testing
