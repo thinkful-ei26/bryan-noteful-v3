@@ -126,7 +126,7 @@ const { id } = req.params;
   } 
   const results = await Note.updateMany({tags: id}, {$pull: {tags: id}});
     if (results.n) {
-    res.sendStatus(204);
+    res.sendStatus(204).end();
   } 
 });
 

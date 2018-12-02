@@ -20,4 +20,14 @@ noteSchema.set('toJSON', {
   }
 });
 
+noteSchema.pre('find', function(next) {
+  this.populate('folderId');
+  next();
+})
+
+noteSchema.pre('findOne', function(next){
+  this.populate('folderId');
+  next();
+})
+
 module.exports = mongoose.model('Note', noteSchema);

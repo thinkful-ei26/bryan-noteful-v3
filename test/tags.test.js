@@ -216,20 +216,17 @@ describe('Hooks', function () {
     it('should delete an existing tag and respond with 204', function () {
       let data;
       return Tag.findOne()
-      .then(console.log('data-----------', data))
-        .then(_data => {
-          data = _data;
-          console.log('dataid-----------', data._id);
-          return chai.request(app).delete(`/api/tags/${data._id}`);
+      .then (_data => {
+        data = _data;
+           chai.request(app).delete(`/api/tags/${data._id}`)
+          .then(function (res) {
+            expect(res).to.have.status(204);
+            return Tag.countDocuments({ _id: data.id });
+          })
+          .then(count => {
+            expect(count).to.equal(0);
+          });
         })
-        .then(function (res) {
-          console.log('resssss-----------', res);
-          expect(res).to.have.status(204);
-          return Tag.countDocuments({ _id: data.id });
-        })
-        .then(count => {
-          expect(count).to.equal(0);
-        });
     });
   });
 

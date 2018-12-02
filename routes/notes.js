@@ -15,11 +15,11 @@ router.get('/', (req, res, next) => {
 
   if (searchTerm) {
     const re = new RegExp(searchTerm, 'i');
-    filter.$or = [{ 'title': re }, { 'content': re }];
+    filter.$or = [{ 'title': re }, { 'content': re }, {'folderId.name': re}];
   }
-  if (folderId) {
-    filter.folderId = folderId
-  }
+  // if (folderId) {
+  //   filter.folderId = folderId
+  // }
 
   if(tagId) {
     filter.tags = tagId
